@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:5.0
+    container_name: limpopo-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: limpopo_classifieds
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - limpopo-network
+
+  # Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: limpopo-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=limpopo_classifieds
+      - CORS_ORIGINS=http://localhost:3000,https://limpopo-connect.vercel.app
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    networks:
+      - limpopo-network
+
+  # Frontend React App  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: limpopo-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - limpopo-network
+
+volumes:
+  mongodb_data:
+  backend_uploads:
+
+networks:
+  limpopo-network:
+    driver: bridge
